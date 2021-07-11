@@ -1,0 +1,135 @@
+import cv2 as cv
+import matplotlib.pyplot as plt
+import numpy as np
+from copy import copy
+
+inicio_img = cv.imread( "circulos_medios.tif", 0 )
+
+inicio_img.astype('uint8')
+
+Kernel = np.ones((19, 19), int)
+
+Kerne2 = np.ones((33, 33), int)
+
+laplaceKernel = np.array([[0, 1, 0],
+                          [1, -4, 1],
+                          [0, 1, 0]])
+
+Kernel = np.flipud(np.fliplr(Kernel))
+Kerne2 = np.flipud(np.fliplr(Kerne2))
+laplace = np.flipud(np.fliplr(laplaceKernel))
+
+print (inicio_img.shape)
+
+inicio_img_pb = copy(inicio_img)
+
+for x in range(inicio_img.shape[1]):
+    for y in range(inicio_img.shape[0]):
+        
+        if inicio_img_pb[y,x] <= 150:
+           inicio_img_pb[y,x] = 0
+        else:
+            inicio_img_pb[y,x] = 255
+
+filtro_img = np.zeros_like(inicio_img)
+erosao_img = np.zeros_like(inicio_img)
+dilatacao_img = np.zeros_like(inicio_img)
+
+
+
+def erosao(entrada, kernel):
+    padding = (kernel.shape[0] - 1) // 2
+
+    filtro_img = np.zeros_like(entrada)
+    
+    (linha, coluna) = entrada.shape
+    
+    for x in range(padding, linha - padding):
+        for y in range(padding, coluna - padding):
+
+            area = np.sum( entrada[ x - padding: x + padding + 1, y - padding: y + padding + 1] * kernel )
+
+            if area == np.sum( kernel )* 255:
+                
+                filtro_img[ x, y ] = 255
+
+            dilatacao_img[ x, y ] = filtro_img[ x, y ]
+
+
+
+def dilatacao( entrada, kernel ):
+    padding = (kernel.shape[0] - 1) // 2
+    
+    (linha, coluna) = entrada.shape
+    
+    for x in range( padding, linha - padding ):
+        for y in range( padding, coluna - padding ):
+
+            area = np.sum( entrada[ x - padding: x + padding + 1, y - padding: y + padding + 1] * kernel)
+
+            if area != 0:
+                filtro_img[ x, y ] = 255
+
+           erosao_img[ x, y ] = filtro_img[ x, y ]
+
+
+
+def laplace( entrada, kernel ):
+    padding = (kernel.shape[0] - 1) // 2
+    
+    (linha, coluna) = entrada.shape
+    
+    for x in range( padding, linha - padding ):
+        for y in range( padding, coluna - padding ):
+
+            area = np.sum( entrada[ x - padding: x + padding + 1, y - padding: y + padding + 1] * kernel)
+
+            filtro_img[ x, y ] = area
+            
+
+
+dilatacao( inicio_img_pb, Kerne2 )
+
+erosao( erosao_img, Kernel )
+
+plt.subplot(1,2,1)
+plt.title('Imagem do inicio')
+plt.imshow( inicio_img, cmap='gray' )
+
+plt.subplot(1,2,2)
+plt.title('abertura e fechamento')
+plt.imshow( dilatacao_img, cmap='gray' )
+plt.show()
+
+laplace(dilatacao_img, laplaceKernel)
+
+plt.title('laplace')
+plt.imshow( filtro_img, cmap='gray' )
+plt.show()
+
+
+for x in range( filtro_img.shape[1] ):
+    for y in range( filtro_img.shape[0] ):
+        
+        if filtro_img[ y, x ] > 0:
+           filtro_img[ y, x ] = 0
+        else:
+           filtro_img[ y, x ] = 255
+
+
+plt.subplot(1,2,1)
+plt.title('Imagem do inicio')
+plt.imshow( inicio_img, cmap='gray' )
+
+filtro_img = filtro_img[25:575, 25:575]
+
+plt.subplot(1,2,2)
+plt.title('Resultado do filtro')
+plt.imshow( filtro_img, cmap='gray' )
+
+plt.tight_layout()
+
+plt.show()
+
+cv.waitKey(0)
+
